@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<?meta name="GENERATOR" content="XML::Smart/1.6.9 Perl/5.014002 [linux]" ?>
+<devices>
+  <device name="Dakota 20" part_number="006-B0960-00">
+    <active>yes</active>
+    <parameter transfer_type="USB" region_id="14" vmaj="2" vmin="20" build_type="Release"/>
+    <software file="http://www8.garmin.com/software/Dakota_WebUpdater__550.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=4527" md5="d6ce69296d29b51af97b446e3c006157" size="8619" vmaj="5" vmin="50"/>
+  </device>
+  <device name="Oregon 300" part_number="006-B0795-00">
+    <active>yes</active>
+    <parameter transfer_type="USB" region_id="14" vmaj="2" vmin="20" build_type="Release"/>
+    <software file="http://www8.garmin.com/software/Oregon_WebUpdater__420.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=4051" md5="3b3538a257d3f6b4a47072fc77bb9096" size="8790" vmaj="4" vmin="20"/>
+  </device>
+  <device name="Oregon 450" part_number="006-B0896-00">
+    <active>yes</active>
+    <parameter transfer_type="USB" region_id="14" vmaj="2" vmin="20" build_type="Release"/>
+    <software file="" info="" md5="" size="" vmaj="" vmin=""/>
+  </device>
+  <device name="Montana 600" part_number="006-B1275-00">
+    <active>yes</active>
+    <parameter transfer_type="USB" region_id="14" vmaj="2" vmin="20" build_type="Release"/>
+    <software file="" info="" md5="" size="" vmaj="" vmin=""/>
+  </device>
+</devices>
+
