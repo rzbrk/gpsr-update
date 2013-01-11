@@ -54,11 +54,14 @@ our $VERSION = '0.2';
 
 =head1 VERSION
 
-Version 0.1
+Version 0.2
 
 =head1 CHANGE LOG
 
 0.1     Initial Release
+0.2     Improved log output and implemented test mode in which neither
+        changes to XML database nor messaging to Twitter will be performed.
+        Additional other small code improvements.
 
 =head1 SYNOPSIS
 
@@ -66,11 +69,22 @@ Version 0.1
 
 # Define some variables
 my $xml_file='devices.xml';
-my $LOG=1;
+my $LOG=1;         # Logging on/off
+my $TESTMODE=0;    # In test mode neither changes to XML nor messaging will be
+                   # performed
 
 # Open the device configuration file
-my $xml=XML::Smart->new($xml_file);
+my $xml=XML::Smart->new($xml_file)
+  or die "Cannot open XML file \"$xml_file\" - exit";
 $xml=$xml->{devices};
+
+if ($LOG)
+{
+    print "\n\n***** gpsr-update.pl, Version $VERSION *****\n\n";
+    my $now=localtime time;
+    print "Now: $now\n";
+    print "XML database: $xml_file\n\n";
+}
 
 # Create list of devices by part number
 my @devs=$xml->{device}('[@]','part_number');
@@ -78,8 +92,6 @@ my @devs=$xml->{device}('[@]','part_number');
 # Loop through the devices
 foreach my $part_no (@devs)
 {
-    print "Device: $part_no\n";
-
     # If parameter active is set to 'yes' then go ahead polling
     # Garmin for update of device software
     my $active=$xml->{device}('part_number','eq',$part_no){'active'} || 'no';
@@ -130,15 +142,15 @@ foreach my $part_no (@devs)
 			    'size'=>${$ret}{'size'},
 			    'md5'=>$md5};
 		push(@{$xml->{device}('part_number','eq',$part_no){'software'}}, $new_sw);
-		$xml->save($xml_file);
+		$xml->save($xml_file) if (! $TESTMODE);
 
 		twitter($name, ${$ret}{'file'}, ${$ret}{'info'});
 	    }
 	}
-
+	print "\n" if ($LOG);
     } else
     {
-	print "Skip device $part_no\n" if ($LOG);
+	print "Skip device $part_no\n\n" if ($LOG);
     }
 }
 
@@ -263,11 +275,11 @@ sub twitter
 
     my $msg="Update available for device $devname. Download: $file_sh. Change Log: $info_sh.";
     my $len=length($msg);
-    #print "$msg ($len)\n" if ($LOG);
 
-    print "  Send message to Twitter\n";
     my $cmd="/usr/bin/ttytter -hold -status=\"$msg\"";
-    print "$msg\n";
-    system($cmd);
-    
+    print "  Send message to Twitter\n" if ($LOG);
+    print "  Message: \"$msg\"\n" if ($TESTMODE);
+    my $ret="";
+    $ret=system($cmd) if (! $TESTMODE);
+    print "$ret\n" if ($LOG);
 }
