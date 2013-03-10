@@ -36,14 +36,13 @@ Twitter.
 gpsr-update checks for software updates for GARMIN GPS handheld devices
 available on GARMIN web server and publishes appropriate notifications on
 Twitter. The script can handle various GARMIN devices, each has to be defined
-in a common XML file (devices.xml).
+in a common XML file (e.g. devices.xml).
 Basically, gpsr-update immitates the communication of GARMINs software
 WebUpdater. The answer of the GARMIN server is checked for available software
 updates. Each software version is also stored in the XML file. If the script
-recognizes that a new software version, a new entry will be created in the XML
-file and a notification along with the links to the download and the release
-notes is published on Twitter. For the latter, the external program ttytter
-(http://www.floodgap.com/software/ttytter/) is used.
+recognizes that a new software version is available, a new entry will be
+created in the XML file and a notification along with the links to the
+download and the release notes is published on Twitter.
 
 This work wouldn't be possible without the previous work of others. 
 The basic functionality I copied from a bash script called "getgmn". The
@@ -53,11 +52,11 @@ author is called "Paul". The script can be found here:
 
 =cut
 
-our $VERSION = '0.3';
+our $VERSION = '0.4';
 
 =head1 VERSION
 
-Version 0.3
+Version 0.4
 
 =head1 CHANGE LOG
 
@@ -67,6 +66,8 @@ Version 0.3
         Additional other small code improvements.
 0.3     Implemented Net::Twitter and command line options. Additional other
         small code improvements.
+0.4     Changed format of Twitter notification. The device name is mentioned at
+        the beginning and the tweet includs the version number.
 
 =head1 SYNOPSIS
 
@@ -181,7 +182,7 @@ foreach my $part_no (@devs)
 		push(@{$xml->{device}('part_number','eq',$part_no){'software'}}, $new_sw);
 		$xml->save($xml_file) if (! $TESTMODE);
 
-		twitter($nt, $name, ${$ret}{'file'}, ${$ret}{'info'});
+		twitter($nt, $name, ${$ret}{'vmaj'}, ${$ret}{'vmin'}, ${$ret}{'file'}, ${$ret}{'info'});
 	    }
 	}
 	print "\n" if (! $NOLOG);
@@ -293,13 +294,13 @@ Compiles and submits a update notification message to Twitter.
 
 sub twitter
 {
-    my ($nt, $devname, $file, $info)=@_;
+    my ($nt, $devname, $vmaj, $vmin, $file, $info)=@_;
 
     # $file and $info contain URLs. Shorten them:
     my $file_sh=url_shortener($file);
     my $info_sh=url_shortener($info);
 
-    my $msg="Update available for device $devname. Download: $file_sh. Change Log: $info_sh.";
+    my $msg="$devname: Update to V$vmaj.$vmin available. Download: $file_sh. Change Log: $info_sh.";
     my $len=length($msg);
 
     print "  Send message to Twitter\n" if (! $NOLOG);
