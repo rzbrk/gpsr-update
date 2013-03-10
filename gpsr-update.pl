@@ -21,6 +21,9 @@ use warnings;
 use XML::Smart;
 use LWP::UserAgent;
 use HTTP::Request::Common;
+use Getopt::Long;
+use Config::Simple;
+use Net::Twitter;
 
 =head1 NAME
 
@@ -50,11 +53,11 @@ author is called "Paul". The script can be found here:
 
 =cut
 
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 
 =head1 VERSION
 
-Version 0.2
+Version 0.3
 
 =head1 CHANGE LOG
 
@@ -62,28 +65,62 @@ Version 0.2
 0.2     Improved log output and implemented test mode in which neither
         changes to XML database nor messaging to Twitter will be performed.
         Additional other small code improvements.
+0.3     Implemented Net::Twitter and command line options. Additional other
+        small code improvements.
 
 =head1 SYNOPSIS
+
+  ./gpsr-update.pl --nolog --testmode --twitter="twitter.ini" --devconf="devices.xml"
 
 =cut
 
 # Define some variables
-my $xml_file='devices.xml';
-my $LOG=1;         # Logging on/off
+my $NOLOG=0;       # Logging on/off; default on
 my $TESTMODE=0;    # In test mode neither changes to XML nor messaging will be
                    # performed
+my $tw_cred='twitter.access.ini';
+my $xml_file='devices.xml';
 
-# Open the device configuration file
-my $xml=XML::Smart->new($xml_file)
-  or die "Cannot open XML file \"$xml_file\" - exit";
-$xml=$xml->{devices};
+# Check for comman line options and override above default values if necessary
+my $resopt=GetOptions("nolog" => \$NOLOG,
+                      "testmode" => \$TESTMODE,
+                      "twitter=s" => \$tw_cred,
+                      "devconf=s" => \$xml_file);
 
-if ($LOG)
+if (! $NOLOG)
 {
     print "\n\n***** gpsr-update.pl, Version $VERSION *****\n\n";
     my $now=localtime time;
     print "Now: $now\n";
-    print "XML database: $xml_file\n\n";
+}
+
+# Open the device configuration file
+my $xml=XML::Smart->new($xml_file) or die $!;
+$xml=$xml->{devices};
+
+# Open the file containing the Twitter credentials
+my $cfg = new Config::Simple() or die $!;
+$cfg->read($tw_cred) or die $!;
+my $access_token        = $cfg->param('access_token');
+my $access_token_secret = $cfg->param('accesss_token_secret');
+my $user_id             = $cfg->param('user_id');
+my $screen_name         = $cfg->param('screen_name');
+my $consumer_key        = $cfg->param('consumer_key');
+my $consumer_secret     = $cfg->param('consumer_secret');
+
+# Connect to Twitter
+my $nt = Net::Twitter->new(
+    traits => [qw/API::REST OAuth/],
+    ( consumer_key => $consumer_key,
+      consumer_secret => $consumer_secret,
+      access_token => $access_token,
+      access_token_secret => $access_token_secret )
+);
+
+if (! $NOLOG)
+{
+    print "XML database: $xml_file\n";
+    print "Twitter credentials: $tw_cred\n\n";
 }
 
 # Create list of devices by part number
@@ -111,7 +148,7 @@ foreach my $part_no (@devs)
     	my $btype=$xml->{device}('part_number','eq',$part_no)
 	{'parameter'}{'build_type'} || 'Release';
 
-	print "Check for device $part_no ($name) ...\n" if ($LOG);
+	print "Check for device $part_no ($name) ...\n" if (! $NOLOG);
 
 	# Extract a list of the software versions by MD5 already found
         my @sw=$xml->{device}('part_number','eq',$part_no)
@@ -130,11 +167,11 @@ foreach my $part_no (@devs)
 	    if (grep { $_ eq $md5 } @sw)
 	    {
 		print "  Software version ${$ret}{'vmaj'}.${$ret}{'vmin'} found. Already notified.\n"
-		    if ($LOG);
+		    if (! $NOLOG);
 	    } else
 	    {
 		print "  Software version ${$ret}{'vmaj'}.${$ret}{'vmin'} found. Uh yeah, new version!\n"
-		    if ($LOG);
+		    if (! $NOLOG);
 		my $new_sw={'vmaj'=>${$ret}{'vmaj'},
 			    'vmin'=>${$ret}{'vmin'},
 			    'file'=>${$ret}{'file'},
@@ -144,16 +181,18 @@ foreach my $part_no (@devs)
 		push(@{$xml->{device}('part_number','eq',$part_no){'software'}}, $new_sw);
 		$xml->save($xml_file) if (! $TESTMODE);
 
-		twitter($name, ${$ret}{'file'}, ${$ret}{'info'});
+		twitter($nt, $name, ${$ret}{'file'}, ${$ret}{'info'});
 	    }
 	}
-	print "\n" if ($LOG);
+	print "\n" if (! $NOLOG);
     } else
     {
-	print "Skip device $part_no\n\n" if ($LOG);
+	print "Skip device $part_no\n\n" if (! $NOLOG);
     }
 }
 
+# Finally, close connection to Twitter
+$nt->end_session();
 
 ################################################################################
 
@@ -196,33 +235,23 @@ sub request
       Content => $msg);
 
     # Check the response and extract data when possible
-    my $ret;
+    my $ret={'md5'=>'',
+	     'vmaj'=>'',
+	     'vmin'=>'',
+	     'file'=>'',
+	     'info'=>'',
+	     'size'=>''};
+
     if ($response->is_success && $response->as_string=~m/.*<Update>.+<\/Update>.*/)
     {
 	my $ref = $response->as_string;
   
-	my $vmaj=$1 if ($ref=~m/.*<VersionMajor>(\d+)<\/VersionMajor>.*/);
-	my $vmin=$1 if ($ref=~m/.*<VersionMinor>(\d+)<\/VersionMinor>.*/);
-	my $file=$1 if ($ref=~m/.*<Location>(.+)<\/Location>.*/);
-	my $info=$1 if ($ref=~m/.*<AdditionalInfo>(.+)<\/AdditionalInfo>.*/);
-	my $size=$1 if ($ref=~m/.*<Size>(\d+)<\/Size>.*/);
-	my $md5=$1 if ($ref=~m/.*<MD5Sum>([\w\d]+)<\/MD5Sum>.*/);
-
-	$ret={'md5'=>$md5,
-	      'vmaj'=>$vmaj,
-	      'vmin'=>$vmin,
-	      'file'=>$file,
-	      'info'=>$info,
-	      'size'=>$size};
-    } else
-    {
-	# Sorry :( no result from GARMIN server.
-	$ret={'md5'=>'',
-	      'vmaj'=>'',
-	      'vmin'=>'',
-	      'file'=>'',
-	      'info'=>'',
-	      'size'=>''};
+	$ret->{'vmaj'}=$1 if ($ref=~m/.*<VersionMajor>(\d+)<\/VersionMajor>.*/);
+	$ret->{'vmin'}=$1 if ($ref=~m/.*<VersionMinor>(\d+)<\/VersionMinor>.*/);
+	$ret->{'file'}=$1 if ($ref=~m/.*<Location>(.+)<\/Location>.*/);
+	$ret->{'info'}=$1 if ($ref=~m/.*<AdditionalInfo>(.+)<\/AdditionalInfo>.*/);
+	$ret->{'size'}=$1 if ($ref=~m/.*<Size>(\d+)<\/Size>.*/);
+	$ret->{'md5'}=$1 if ($ref=~m/.*<MD5Sum>([\w\d]+)<\/MD5Sum>.*/);
     }
 
     return $ret;
@@ -258,16 +287,13 @@ sub url_shortener
 
 =head2 twitter
 
-Compiles and submits a update notification message to Twitter. As up to now,
-this routine uses the external program ttytter for the communication with the
-Twitter service. In a later version this will be replaced by using Net::Twitter
-or similar.
+Compiles and submits a update notification message to Twitter.
 
 =cut
 
 sub twitter
 {
-    my ($devname, $file, $info)=@_;
+    my ($nt, $devname, $file, $info)=@_;
 
     # $file and $info contain URLs. Shorten them:
     my $file_sh=url_shortener($file);
@@ -276,10 +302,10 @@ sub twitter
     my $msg="Update available for device $devname. Download: $file_sh. Change Log: $info_sh.";
     my $len=length($msg);
 
-    my $cmd="/usr/bin/ttytter -hold -status=\"$msg\"";
-    print "  Send message to Twitter\n" if ($LOG);
-    print "  Message: \"$msg\"\n" if ($TESTMODE);
-    my $ret="";
-    $ret=system($cmd) if (! $TESTMODE);
-    print "$ret\n" if ($LOG);
+    print "  Send message to Twitter\n" if (! $NOLOG);
+    print "  Message: \"$msg\" ($len characters)\n" if ($TESTMODE);
+    if (! $TESTMODE)
+    {
+	$nt->update($msg) or die $!;
+    }
 }

@@ -1,25 +1,66 @@
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <?meta name="GENERATOR" content="XML::Smart/1.6.9 Perl/5.014002 [linux]" ?>
 <devices>
-  <device name="Dakota 20" part_number="006-B0960-00">
+  <device name="Dakota 10/20" part_number="006-B0960-00">
     <active>yes</active>
     <parameter transfer_type="USB" region_id="14" vmaj="2" vmin="20" build_type="Release"/>
     <software file="http://www8.garmin.com/software/Dakota_WebUpdater__550.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=4527" md5="d6ce69296d29b51af97b446e3c006157" size="8619" vmaj="5" vmin="50"/>
+    <software file="http://www8.garmin.com/software/Dakota_WebUpdater__560.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=4527" md5="c8615a8710bac67fe524765d24bae2ea" size="8618" vmaj="5" vmin="60"/>
   </device>
-  <device name="Oregon 300" part_number="006-B0795-00">
+  <device name="Oregon x00" part_number="006-B0795-00">
     <active>yes</active>
     <parameter transfer_type="USB" region_id="14" vmaj="2" vmin="20" build_type="Release"/>
     <software file="http://www8.garmin.com/software/Oregon_WebUpdater__420.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=4051" md5="3b3538a257d3f6b4a47072fc77bb9096" size="8790" vmaj="4" vmin="20"/>
   </device>
-  <device name="Oregon 450" part_number="006-B0896-00">
+  <device name="Oregon x50" part_number="006-B0896-00">
     <active>yes</active>
-    <parameter transfer_type="USB" region_id="14" vmaj="2" vmin="20" build_type="Release"/>
+    <parameter transfer_type="USB" region_id="14" vmaj="6" vmin="10" build_type="Release"/>
     <software file="" info="" md5="" size="" vmaj="" vmin=""/>
+    <software file="http://www8.garmin.com/software/Oregonx50_WebUpdater__610.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=4523" md5="e915aeb56e4a39f27b0054c599b313cc" size="10709" vmaj="6" vmin="10"/>
   </device>
-  <device name="Montana 600" part_number="006-B1275-00">
+  <device name="eTrex 10" part_number="006-B1304-00">
+    <active>yes</active>
+    <parameter transfer_type="USB" region_id="14" vmaj="2" vmin="90" build_type="Release"/>
+    <software file="" info="" md5="" size="" vmaj="" vmin=""/>
+    <software file="http://www8.garmin.com/software/eTrex10_Webupdater__290.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=5555" md5="083b40ac69c2164b87b55b1384e57d88" size="4087" vmaj="2" vmin="90"/>
+  </device>
+  <device name="eTrex 20/30" part_number="006-B1305-00">
+    <active>yes</active>
+    <parameter transfer_type="USB" region_id="14" vmaj="2" vmin="80" build_type="Release"/>
+    <software file="" info="" md5="" size="" vmaj="" vmin=""/>
+    <software file="http://www8.garmin.com/software/eTrex20_30_Webupdater__280.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=5553" md5="ee97277250be6abb6183ac5e3c55849a" size="8806" vmaj="2" vmin="80"/>
+    <software file="http://www8.garmin.com/software/eTrex20_30_Webupdater__290.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=5553" md5="07272e76692b5515f36e4d28f6890db5" size="9037" vmaj="2" vmin="90"/>
+  </device>
+  <device name="Montana" part_number="006-B1275-00">
     <active>yes</active>
     <parameter transfer_type="USB" region_id="14" vmaj="2" vmin="20" build_type="Release"/>
     <software file="" info="" md5="" size="" vmaj="" vmin=""/>
+    <software file="http://www8.garmin.com/software/Montana_WebUpdater__460.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=5335" md5="73a0bc4489271de6cc912706ef8e249d" size="17033" vmaj="4" vmin="60"/>
+    <software file="http://www8.garmin.com/software/Montana_WebUpdater__470.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=5335" md5="d527456613ab1912bc465ab21f855b02" size="17041" vmaj="4" vmin="70"/>
+  </device>
+  <device name="Rino 6xx" part_number="006-B1247-00">
+    <active>yes</active>
+    <parameter transfer_type="USB" region_id="14" vmaj="3" vmin="20" build_type="Release"/>
+    <software file="" info="" md5="" size="" vmaj="" vmin=""/>
+    <software file="http://www8.garmin.com/software/Rino6xx_WebUpdater__320.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=5525" md5="f4256873a3451935ff10b564ccf029d2" size="8333" vmaj="3" vmin="20"/>
+  </device>
+  <device name="GPSMAP 62sc/62stc" part_number="006-B1340-00">
+    <active>yes</active>
+    <parameter transfer_type="USB" region_id="14" vmaj="3" vmin="40" build_type="Release"/>
+    <software file="" info="" md5="" size="" vmaj="" vmin=""/>
+    <software file="http://www8.garmin.com/software/GPSMAP62sc_62stc_WebUpdater__340.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=5559" md5="8a3e9a24d2693517d8ee8478f7337a6c" size="8216" vmaj="3" vmin="40"/>
+  </device>
+  <device name="GPSMAP 62/78" part_number="006-B1113-00">
+    <active>yes</active>
+    <parameter transfer_type="USB" region_id="14" vmaj="4" vmin="60" build_type="Release"/>
+    <software file="" info="" md5="" size="" vmaj="" vmin=""/>
+    <software file="http://www8.garmin.com/software/GPSMAP62_78_WebUpdater__460.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=4995" md5="6540c0aa2d7330f4c3e9677a91d3cfe7" size="8492" vmaj="4" vmin="60"/>
+  </device>
+  <device name="Colorado" part_number="006-B0661-00">
+    <active>yes</active>
+    <parameter transfer_type="USB" region_id="14" vmaj="3" vmin="70" build_type="Release"/>
+    <software file="" info="" md5="" size="" vmaj="" vmin=""/>
+    <software file="http://www8.garmin.com/software/Colorado_WebUpdater__370.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=3887" md5="80e762130e6e2edf61ce2b3cf5cf34d7" size="7430" vmaj="3" vmin="70"/>
   </device>
 </devices>
 
