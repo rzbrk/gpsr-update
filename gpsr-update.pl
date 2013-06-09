@@ -15,34 +15,49 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use v5.10.1;
+
 use strict;
 use warnings;
+use Data::Dumper;
 
+use Try::Tiny;
 use XML::Smart;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 use Getopt::Long;
-use Config::Simple;
 use Net::Twitter;
+
+# Manufacturer dependend libraries
+use lib "lib";
+use Device;
+use Garmin;
+use Gsak;
+use Ocm;
+use Tools;
 
 =head1 NAME
 
-gpsr-update -- Checks for software updates for GARMIN GPS handheld devices
-available on GARMIN web server and publishes appropriate notifications on
-Twitter.
+gpsr-update -- Checks for firmware updates for GPS handheld devices and
+some geocaching related software tools. If updates are available an
+appropriate notifications will be send via Twitter.
 
 =head1 DESCRIPTION
 
-gpsr-update checks for software updates for GARMIN GPS handheld devices
-available on GARMIN web server and publishes appropriate notifications on
-Twitter. The script can handle various GARMIN devices, each has to be defined
-in a common XML file (e.g. devices.xml).
-Basically, gpsr-update immitates the communication of GARMINs software
-WebUpdater. The answer of the GARMIN server is checked for available software
-updates. Each software version is also stored in the XML file. If the script
-recognizes that a new software version is available, a new entry will be
-created in the XML file and a notification along with the links to the
-download and the release notes is published on Twitter.
+gpsr-update checks for software updates. First of all, it is meant to
+check for updates for GPS handheld devices. Thanks to its object
+oriented design it can principally handle GPSr from different 
+manufacturers like Garmin or Magellan. Additionally, by defining
+"virtual GPSr" it can check also for software updates for non-hardware.
+This can be used to check for the existence of updates for e.g. GSAK or
+other stuff.
+
+If new updates are available, an appropriate notification is send via
+Twitter. In addition, this update found is stored into an XML file.
+This way, the script can remember all the updates found in the past for
+which no notification is needed when the script is called in the future.
+
+This script can be extended basically by adding appropriate packages.
 
 This work wouldn't be possible without the previous work of others. 
 The basic functionality I copied from a bash script called "getgmn". The
@@ -52,11 +67,11 @@ author is called "Paul". The script can be found here:
 
 =cut
 
-our $VERSION = '0.4';
+our $VERSION = '0.5';
 
 =head1 VERSION
 
-Version 0.4
+Version 0.5
 
 =head1 CHANGE LOG
 
@@ -68,10 +83,13 @@ Version 0.4
         small code improvements.
 0.4     Changed format of Twitter notification. The device name is mentioned at
         the beginning and the tweet includs the version number.
+0.5		Rewrote complete code to OOP. The twitter credentials are now
+		integrated to the XML configuration file. Changed command line
+		options.
 
 =head1 SYNOPSIS
 
-  ./gpsr-update.pl --nolog --testmode --twitter="twitter.ini" --devconf="devices.xml"
+  ./gpsr-update.pl [--nolog] [--testmode] [--conf="config.xml"]
 
 =cut
 
@@ -79,14 +97,12 @@ Version 0.4
 my $NOLOG=0;       # Logging on/off; default on
 my $TESTMODE=0;    # In test mode neither changes to XML nor messaging will be
                    # performed
-my $tw_cred='twitter.access.ini';
-my $xml_file='devices.xml';
+my $xml_file='config.xml';
 
-# Check for comman line options and override above default values if necessary
+# Check for command line options and override above default values if necessary
 my $resopt=GetOptions("nolog" => \$NOLOG,
                       "testmode" => \$TESTMODE,
-                      "twitter=s" => \$tw_cred,
-                      "devconf=s" => \$xml_file);
+                      "conf=s" => \$xml_file);
 
 if (! $NOLOG)
 {
@@ -95,19 +111,17 @@ if (! $NOLOG)
     print "Now: $now\n";
 }
 
-# Open the device configuration file
+# Open the configuration file
 my $xml=XML::Smart->new($xml_file) or die $!;
-$xml=$xml->{devices};
+$xml=$xml->{config} or die "$xml_file is no valid configuration file.";
 
-# Open the file containing the Twitter credentials
-my $cfg = new Config::Simple() or die $!;
-$cfg->read($tw_cred) or die $!;
-my $access_token        = $cfg->param('access_token');
-my $access_token_secret = $cfg->param('accesss_token_secret');
-my $user_id             = $cfg->param('user_id');
-my $screen_name         = $cfg->param('screen_name');
-my $consumer_key        = $cfg->param('consumer_key');
-my $consumer_secret     = $cfg->param('consumer_secret');
+# Get the Twitter credentials
+my $access_token=$xml->{'twitter'}{'access_token'}->content || "";
+my $access_token_secret=$xml->{'twitter'}{'access_token_secret'}->content || "";
+my $user_id=$xml->{'twitter'}{'user_id'}->content || "";
+my $screen_name=$xml->{'twitter'}{'screen_name'}->content || "";
+my $consumer_key=$xml->{'twitter'}{'consumer_key'}->content || "";
+my $consumer_secret=$xml->{'twitter'}{'consumer_secret'}->content || "";
 
 # Connect to Twitter
 my $nt = Net::Twitter->new(
@@ -120,75 +134,49 @@ my $nt = Net::Twitter->new(
 
 if (! $NOLOG)
 {
-    print "XML database: $xml_file\n";
-    print "Twitter credentials: $tw_cred\n\n";
+    print "XML database: $xml_file\n\n";
 }
 
-# Create list of devices by part number
-my @devs=$xml->{device}('[@]','part_number');
+# Create list of devices by id
+my @devs=$xml->{'device'}('[@]','id');
+
 
 # Loop through the devices
-foreach my $part_no (@devs)
+foreach my $id (@devs)
 {
+	# Extract the parameter for the device selected from the xml
+	# structure
+	my $devpar=$xml->{'device'}('id','eq',$id);
+
     # If parameter active is set to 'yes' then go ahead polling
     # Garmin for update of device software
-    my $active=$xml->{device}('part_number','eq',$part_no){'active'} || 'no';
+    my $active=$devpar->{'active'}->content || 'no';
     if ($active=~ /yes/i)
-    {	
-	# Extract parameters for the HTTP request string
-	my $name=$xml->{device}('part_number','eq',$part_no)
-	{'name'} || '>>Unknown Device<<';
-	my $ttype=$xml->{device}('part_number','eq',$part_no)
-	{'parameter'}{'transfer_type'} || 'USB';
-	my $regid=$xml->{device}('part_number','eq',$part_no)
-	{'parameter'}{'region_id'} || '1';
-	my $vmaj=$xml->{device}('part_number','eq',$part_no)
-	{'parameter'}{'vmaj'} || '1';
-	my $vmin=$xml->{device}('part_number','eq',$part_no)
-	{'parameter'}{'vmin'} || '0';
-    	my $btype=$xml->{device}('part_number','eq',$part_no)
-	{'parameter'}{'build_type'} || 'Release';
+    {
+	# Determine the manufacturer and the module to use. First letter of 
+	# $class needs to be uppercase, rest lowercase
+	my $class=$devpar->{'class'}->content || "Default";
+	$class=lc $class; $class=ucfirst $class;
+	my $name=$devpar->{'name'}->content || "";
 
-	print "Check for device $part_no ($name) ...\n" if (! $NOLOG);
+	no strict 'refs';
+	my $gpsr=try { $class->new({ devpar=>$devpar }) } catch { undef };
+	
+	my $msg=try { $gpsr->check_update({ NOLOG=>$NOLOG,
+								        TESTMODE=> $TESTMODE }) } catch { "" };
 
-	# Extract a list of the software versions by MD5 already found
-        my @sw=$xml->{device}('part_number','eq',$part_no)
-	{'software'}('[@]','md5');
+	$gpsr->save_device_data({ NOLOG=>$NOLOG,
+							  TESTMODE=> $TESTMODE,
+							  id=>$id,
+							  xml=>$xml,
+							  xml_file=>$xml_file });
+							  		  
+	twitter($nt, $msg) if (! $msg eq '');
 
-	# Build the HTTP request and submit to GARMIN server
-	my $ret=request($part_no, $ttype, $regid, $vmaj, $vmin, $btype);
-	my $md5=${$ret}{'md5'};
-
-	# Now check the MD5. First, if there is a valid answer from GARMIN
-	# server, this entry in the data structure is not empty. Second,
-	# check, if we already have the software version. If not, then add
-	# to XML structure and compose a message for Twitter.
-	if (! $md5 eq '')
-	{
-	    if (grep { $_ eq $md5 } @sw)
-	    {
-		print "  Software version ${$ret}{'vmaj'}.${$ret}{'vmin'} found. Already notified.\n"
-		    if (! $NOLOG);
-	    } else
-	    {
-		print "  Software version ${$ret}{'vmaj'}.${$ret}{'vmin'} found. Uh yeah, new version!\n"
-		    if (! $NOLOG);
-		my $new_sw={'vmaj'=>${$ret}{'vmaj'},
-			    'vmin'=>${$ret}{'vmin'},
-			    'file'=>${$ret}{'file'},
-			    'info'=>${$ret}{'info'},
-			    'size'=>${$ret}{'size'},
-			    'md5'=>$md5};
-		push(@{$xml->{device}('part_number','eq',$part_no){'software'}}, $new_sw);
-		$xml->save($xml_file) if (! $TESTMODE);
-
-		twitter($nt, $name, ${$ret}{'vmaj'}, ${$ret}{'vmin'}, ${$ret}{'file'}, ${$ret}{'info'});
-	    }
-	}
 	print "\n" if (! $NOLOG);
     } else
     {
-	print "Skip device $part_no\n\n" if (! $NOLOG);
+	print "Skip device $id\n\n" if (! $NOLOG);
     }
 }
 
@@ -199,114 +187,22 @@ $nt->end_session();
 
 =head1 SUBROUTINES/METHODS
 
-=head2 request
-
-Sends a request to check for the latest software version for a given device
-($part_no) to the GARMIN server. Returns a structure reference with the
-appropriate information.  
-
-=cut
-
-sub request
-{
-    my ($part_no, $ttype, $regid, $vmaj, $vmin, $btype)=@_;
-
-    # The request message
-    my $msg="req=<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>
-	     <Requests xmlns=\"http://www.garmin.com/xmlschemas/UnitSoftwareUpdate/v3\">
-	       <Request>
-	         <PartNumber>$part_no</PartNumber>
-	         <TransferType>$ttype</TransferType>
-	         <Region>
-	           <RegionId>$regid</RegionId>
-	           <Version>
-	             <VersionMajor>$vmaj</VersionMajor>
-	             <VersionMinor>$vmin</VersionMinor>
-	             <BuildType>$btype</BuildType>
-	           </Version>
-	         </Region>
-	       </Request>
-	     </Requests>";
-
-    # Poll the GARMIN server
-    my $userAgent = LWP::UserAgent->new(agent => 'perl post');
-    my $url="http://www.garmin.com/support/WUSoftwareUpdate.jsp";
-    my $response = $userAgent->request(POST $url,
-      Content_Type => 'application/x-www-form-urlencoded',
-      Content => $msg);
-
-    # Check the response and extract data when possible
-    my $ret={'md5'=>'',
-	     'vmaj'=>'',
-	     'vmin'=>'',
-	     'file'=>'',
-	     'info'=>'',
-	     'size'=>''};
-
-    if ($response->is_success && $response->as_string=~m/.*<Update>.+<\/Update>.*/)
-    {
-	my $ref = $response->as_string;
-  
-	$ret->{'vmaj'}=$1 if ($ref=~m/.*<VersionMajor>(\d+)<\/VersionMajor>.*/);
-	$ret->{'vmin'}=$1 if ($ref=~m/.*<VersionMinor>(\d+)<\/VersionMinor>.*/);
-	$ret->{'file'}=$1 if ($ref=~m/.*<Location>(.+)<\/Location>.*/);
-	$ret->{'info'}=$1 if ($ref=~m/.*<AdditionalInfo>(.+)<\/AdditionalInfo>.*/);
-	$ret->{'size'}=$1 if ($ref=~m/.*<Size>(\d+)<\/Size>.*/);
-	$ret->{'md5'}=$1 if ($ref=~m/.*<MD5Sum>([\w\d]+)<\/MD5Sum>.*/);
-    }
-
-    return $ret;
-}
-
-=head2 url_shortener
-
-Accepts one URL, forwards it to the service http://is.gd and finally returns
-the shortened URL.
-
-=cut
-
-sub url_shortener
-{
-    my $long_url=shift;
-
-    my $userAgent = LWP::UserAgent->new(agent => 'perl post');
-    my $serv_url="http://is.gd/api.php?longurl=$long_url";
-    my $response = $userAgent->request(POST $serv_url,
-      Content_Type => 'application/x-www-form-urlencoded',
-      Content => '');
-    my $short_url;
-    if ($response->is_success && $response->as_string=~m|.*(http://is.gd/.+)|)
-    {
-	$short_url=$1;
-    } else
-    {
-	$short_url='';
-    }
-
-    return $short_url;
-}
-
 =head2 twitter
 
-Compiles and submits a update notification message to Twitter.
+Submits an update notification message to Twitter.
 
 =cut
 
 sub twitter
 {
-    my ($nt, $devname, $vmaj, $vmin, $file, $info)=@_;
+	my ($nt, $msg)=@_;
 
-    # $file and $info contain URLs. Shorten them:
-    my $file_sh=url_shortener($file);
-    my $info_sh=url_shortener($info);
-
-    my $msg="$devname: Update to V$vmaj.$vmin available. Download: $file_sh. Change Log: $info_sh.";
     my $len=length($msg);
 
     print "  Send message to Twitter\n" if (! $NOLOG);
-    print "  Message: \"$msg\" ($len characters)\n" if ($TESTMODE);
+    print "  Message: \"$msg\" ($len characters)\n" if (! $NOLOG);
     if (! $TESTMODE)
     {
-	$nt->update($msg) or die $!;
+		$nt->update($msg) or die $!;
     }
 }

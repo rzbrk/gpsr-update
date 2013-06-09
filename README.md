@@ -4,16 +4,20 @@ gpsr-update
 Description
 -----------
 
-gpsr-update checks for software updates for GARMIN GPS handheld devices
-available on GARMIN web server and publishes appropriate notifications on
-Twitter. The script can handle various GARMIN devices, each has to be defined
-in a common XML file (e.g. devices.xml).
-Basically, gpsr-update immitates the communication of GARMINs software
-WebUpdater. The answer of the GARMIN server is checked for available software
-updates. Each software version is also stored in the XML file. If the script
-recognizes that a new software version is available, a new entry will be
-created in the XML file and a notification along with the links to the
-download and the release notes is published on Twitter.
+gpsr-update checks for software updates. First of all, it is meant to
+check for updates for GPS handheld devices. Thanks to its object
+oriented design it can principally handle GPSr from different 
+manufacturers like Garmin or Magellan. Additionally, by defining
+"virtual GPSr" it can check also for software updates for non-hardware.
+This can be used to check for the existence of updates for e.g. GSAK or
+other stuff.
+
+If new updates are available, an appropriate notification is send to
+twitter. In addition, this update found is stored into an XML file.
+This way, the script can remember all the updates found in the past for
+which no notification is needed when the script is called in the future.
+
+This script can be extended basically by adding appropriate packages.
 
 This work wouldn't be possible without the previous work of others. 
 The basic functionality I copied from a bash script called "getgmn". The
@@ -33,6 +37,7 @@ modifications, it may not run on other operating systems.
 1. Perl modules
 
 You need the following Perl modules available from CPAN:
+ Try::Tiny
  XML::Smart;
  LWP::UserAgent;
  HTTP::Request::Common;
@@ -42,8 +47,8 @@ You need the following Perl modules available from CPAN:
 
 2. Installation of Perl script
 
-Simply copy at least gpsr-update.pl and devices.xml on your hard drive. If
-needed, add additional device profiles in devices.xml.
+Simply copy at gpsr-update.pl, config.xml and lib/* on your hard drive.
+If needed, make changes to config.xml.
 
 3. Registration of application at Twitter
 
@@ -57,13 +62,11 @@ follow the instructions described here:
 Execution
 ---------
 
-  gpsr-update.pl [--nolog] [--testmode] [--twitter="twitter.ini"]
-                 [--devconf="devices.xml"]
+  gpsr-update.pl [--nolog] [--testmode] [--conf="config.xml"]
 
-  --nolog	 Disable log output. Default is log output.
-  --testmode	 In test mode Twitter notifications are suppressed.
-  		 Default is to notificate via Twitter
-  --twitter	 Specify the file holding the Twitter account details.
-  		 Default is file "twitter.ini" in same directory as the script.
-  --devconf	 Specify the file with the device configurations. Default is
-  		 file "devices.xml" in same directory as the script.
+  --nolog	 	Disable log output. Default is log output.
+  --testmode	In test mode Twitter notifications are suppressed and no
+				changes are made to the configuration files (updates
+				found).	Default is testmode off.
+  --conf		Specify the configuration file. Default is file
+				"config.xml" in same directory as the script.
