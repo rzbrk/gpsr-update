@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <?meta name="GENERATOR" content="XML::Smart/1.6.9 Perl/5.014002 [linux]" ?>
 <config>
-  <twitter access_token="1053425767-9pUhllDvVAChLOM6KqZRmuBUDKalZV7ZfgkbBvN" access_token_secret="lNt1ODYASpbh2ilEqJtZrMKDsHbQ42obpWQzAavQJjE" user_id="1053425767" screen_name="GPSr_Updates" consumer_key="2me0nEHW7ylxM4vP00hw" consumer_secret="XvhTk0TFt1OhNJ7lVQe7G2bC3dImGxfr89CFDtB9gTM"/>
+  <twitter access_token="" access_token_secret="" user_id="" screen_name="GPSr_Updates" consumer_key="" consumer_secret=""/>
   <device id="Dakota" class="Garmin" name="Dakota 10/20" active="no">
     <parameter part_number="006-B0960-00" transfer_type="USB" region_id="14" vmaj="2" vmin="20" build_type="Release"/>
     <software file="http://www8.garmin.com/software/Dakota_WebUpdater__550.gcd" info="http://www8.garmin.com/support/download_details.jsp?id=4527" md5="d6ce69296d29b51af97b446e3c006157" size="8619" vmaj="5" vmin="50"/>
