@@ -1,0 +1,7 @@
+2013/06/12:
+
+* The Twitter REST API v1 will soon stop functioning. Please migrate to 
+API v1.1. https://dev.twitter.com/docs/api/1.1/overview. at 
+gpsr-update.pl line 184
+
+* HTTP return code in Gsak.pm auswerten, z.B. 5xx: Server Error
