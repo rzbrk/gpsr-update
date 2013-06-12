@@ -125,7 +125,7 @@ my $consumer_secret=$xml->{'twitter'}{'consumer_secret'}->content || "";
 
 # Connect to Twitter
 my $nt = Net::Twitter->new(
-    traits => [qw/API::REST OAuth/],
+    traits => [qw/API::RESTv1_1 OAuth/],
     ( consumer_key => $consumer_key,
       consumer_secret => $consumer_secret,
       access_token => $access_token,
@@ -180,8 +180,8 @@ foreach my $id (@devs)
     }
 }
 
-# Finally, close connection to Twitter
-$nt->end_session();
+# Finally, close connection to Twitter (Deprecated in Twitter REST API V1.1)
+#$nt->end_session();
 
 ################################################################################
 

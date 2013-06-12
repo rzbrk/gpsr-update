@@ -5,4 +5,6 @@
 # Various
 old/
 test/
-twitter.access.ini
+config.xml.*
+devices.*
+test.*
