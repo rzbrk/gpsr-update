@@ -71,7 +71,7 @@ our $VERSION = '0.5';
 
 =head1 VERSION
 
-Version 0.5
+Version 0.6
 
 =head1 CHANGE LOG
 
@@ -86,6 +86,7 @@ Version 0.5
 0.5		Rewrote complete code to OOP. The twitter credentials are now
 		integrated to the XML configuration file. Changed command line
 		options.
+0.6	Enabled SSL, as Twitter now requires it.
 
 =head1 SYNOPSIS
 
@@ -125,11 +126,13 @@ my $consumer_secret=$xml->{'twitter'}{'consumer_secret'}->content || "";
 
 # Connect to Twitter
 my $nt = Net::Twitter->new(
-    traits => [qw/API::RESTv1_1 OAuth/],
+    traits => [qw/API::RESTv1_1 RetryOnError/],
     ( consumer_key => $consumer_key,
       consumer_secret => $consumer_secret,
       access_token => $access_token,
-      access_token_secret => $access_token_secret )
+      access_token_secret => $access_token_secret,
+      ssl => 1,
+    )
 );
 
 if (! $NOLOG)
